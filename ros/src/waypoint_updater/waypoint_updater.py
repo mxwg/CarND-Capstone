@@ -82,7 +82,7 @@ class WaypointUpdater(object):
         """Set the velocities of the next waypoints."""
         for i in range(self.n_lookahead_wp):
             wp = self.nearest(offset=i)
-            wp.twist.twist.linear.x = 1  # TODO: set linear velocity to something sensible
+            wp.twist.twist.linear.x = 10  # TODO: set linear velocity to something sensible
 
     def publish_final_waypoints(self, visualize=True):
         """Publish the next waypoints."""
