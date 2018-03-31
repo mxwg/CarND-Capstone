@@ -3,6 +3,7 @@
 import rospy
 import numpy as np
 from scipy.spatial import KDTree
+from std_msgs.msg import Int32
 from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint
 from visualization_msgs.msg import Marker, MarkerArray
@@ -44,6 +45,25 @@ def waypointToMarker(waypoint, frame_id, ts=rospy.Time(0), idx=0, color=[0.0, 1.
     marker.color.b = color[2]
     return marker
 
+def stopMarker(waypoint, frame_id, ts=rospy.Time(0), idx=0):
+    scale = 25
+    color = [1.0, 0.0, 0.0]
+
+    marker = Marker()
+    marker.header.frame_id = frame_id
+    marker.header.stamp = ts
+    marker.id = idx
+    marker.type = Marker.CUBE
+    marker.pose.position = waypoint.pose.pose.position
+    marker.pose.orientation = waypoint.pose.pose.orientation
+    marker.scale.x = scale
+    marker.scale.y = scale
+    marker.scale.z = scale
+    marker.color.a = 1
+    marker.color.r = color[0]
+    marker.color.g = color[1]
+    marker.color.b = color[2]
+    return marker
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -51,6 +71,7 @@ class WaypointUpdater(object):
 
         rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         rospy.Subscriber('/base_waypoints', Lane, self.get_all_waypoints_cb)
+        rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb, queue_size=1)
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
 
@@ -66,6 +87,7 @@ class WaypointUpdater(object):
         self.n_lookahead_wp = LOOKAHEAD_WPS
         self.nearest_idx = None
         self.wp_tree = None
+        self.next_traffic_light_idx = None
 
         rospy.spin()
 
@@ -111,7 +133,11 @@ class WaypointUpdater(object):
                 array.markers.append(
                     waypointToMarker(self.nearest(i), 'world', ts=rospy.Time.now(), idx=i, color=yellow))
 
+        if self.next_traffic_light_idx and self.next_traffic_light_idx != -1:
+            array.markers.append(stopMarker(self.waypoints[self.next_traffic_light_idx],
+                                            'world', ts=rospy.Time.now(), idx=len(array.markers)))
         self.final_waypoints_marker_pub.publish(array)
+
 
     def nearest(self, offset=0):
         """Get current nearest waypoint."""
@@ -153,8 +179,7 @@ class WaypointUpdater(object):
         rospy.loginfo("Received {} waypoints...".format(self.n_wp))
 
     def traffic_cb(self, msg):
-        # TODO: Callback for /traffic_waypoint message. Implement
-        pass
+        self.next_traffic_light_idx = msg.data
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later
