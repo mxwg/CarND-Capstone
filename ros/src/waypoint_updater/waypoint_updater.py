@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import rospy
+import numpy as np
+from scipy.spatial import KDTree
 from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint
 from visualization_msgs.msg import Marker, MarkerArray
@@ -63,6 +65,7 @@ class WaypointUpdater(object):
         self.n_wp = 0
         self.n_lookahead_wp = LOOKAHEAD_WPS
         self.nearest_idx = None
+        self.wp_tree = None
 
         rospy.spin()
 
@@ -89,9 +92,9 @@ class WaypointUpdater(object):
         lane = Lane()
         lane.header.frame_id = 'world'
         lane.header.stamp = rospy.Time.now()
-        for i in range(self.n_lookahead_wp):
-            wp = self.nearest(offset=i)
-            lane.waypoints.append(wp)
+        # for i in range(self.n_lookahead_wp):
+        #     wp = self.nearest(offset=i)
+        lane.waypoints = self.waypoints[self.nearest_idx:self.nearest_idx+self.n_lookahead_wp]
 
         self.final_waypoints_pub.publish(lane)
         if visualize:
@@ -116,27 +119,22 @@ class WaypointUpdater(object):
 
     def update_nearest_waypoint(self):
         """Find the index of the currently nearest waypoint."""
-        if not self.nearest_idx or self.dist_to(self.nearest()) > 10.0:
-            nearest_dist = float('inf')
-            nearest_idx = 0
-            for i, waypoint in enumerate(self.waypoints):
-                if self.dist_to(waypoint) < nearest_dist:
-                    nearest_dist = self.dist_to(waypoint)
-                    nearest_idx = i
-            self.nearest_idx = nearest_idx
-            rospy.loginfo("Nearest waypoint is at index {} with distance {} m.".format(nearest_idx, nearest_dist))
-        else:
-            # begin check from current index
-            nearest_idx = self.nearest_idx
-            nearest_dist = self.dist_to(self.waypoints[nearest_idx])
+        if not self.wp_tree:
+            self.nearest_idx = 0
+            return
+        nearest_idx = self.wp_tree.query([self.car_pose_x, self.car_pose_y], 1)[1]
 
-            for i in range(self.n_lookahead_wp):
-                current_idx = (nearest_idx + i) % self.n_wp
-                current_waypoint = self.waypoints[current_idx]
-                if self.dist_to(current_waypoint) < nearest_dist:
-                    nearest_idx = current_idx
-                    nearest_dist = self.dist_to(current_waypoint)
-            self.nearest_idx = nearest_idx
+        # check if the closest waypoint is behind the car
+        nearest_wp = self.waypoints[nearest_idx].pose.pose.position
+        prev_wp = self.waypoints[nearest_idx - 1].pose.pose.position
+
+        nearest = np.array([nearest_wp.x, nearest_wp.y])
+        prev = np.array([prev_wp.x, prev_wp.y])
+        car = np.array([self.car_pose_x, self.car_pose_y])
+
+        if np.dot(nearest - prev, car - nearest) > 0: # waypoint is behind car
+            self.nearest_idx = (nearest_idx + 1) % self.n_wp
+
         # rospy.logdebug("Nearest waypoint: {}, dist: {}".format(self.nearest_waypoint_idx, self.dist_to(self.nearest())))
 
     def dist_to(self, waypoint):
@@ -149,7 +147,9 @@ class WaypointUpdater(object):
         self.waypoints = lane.waypoints
         self.n_wp = len(self.waypoints)
         if self.n_wp < self.n_lookahead_wp:
-            self.n_lookahead_wp = self.n_wp / 4 # only look 25% of all waypoints ahead
+            self.n_lookahead_wp = self.n_wp / 4  # only look 25% of all waypoints ahead
+
+        self.wp_tree = KDTree([[wp.pose.pose.position.x, wp.pose.pose.position.y] for wp in self.waypoints])
         rospy.loginfo("Received {} waypoints...".format(self.n_wp))
 
     def traffic_cb(self, msg):
