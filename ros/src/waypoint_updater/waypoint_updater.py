@@ -22,7 +22,7 @@ as well as to verify your TL classifier.
 TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
-LOOKAHEAD_WPS = 200  # Number of waypoints we will publish. You can change this number
+LOOKAHEAD_WPS = 100  # Number of waypoints we will publish. You can change this number
 
 
 def waypointToMarker(waypoint, frame_id, ts=rospy.Time(0), idx=0, color=[0.0, 1.0, 0.0]):
@@ -82,7 +82,7 @@ class WaypointUpdater(object):
         """Set the velocities of the next waypoints."""
         for i in range(self.n_lookahead_wp):
             wp = self.nearest(offset=i)
-            wp.twist.twist.linear.x = 1  # TODO: set linear velocity to something sensible
+            wp.twist.twist.linear.x = 10  # TODO: set linear velocity to something sensible
 
     def publish_final_waypoints(self, visualize=True):
         """Publish the next waypoints."""
