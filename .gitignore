@@ -4,3 +4,7 @@ build
 devel
 
 profile.tmp
+*.xml
+*.iml
+*.iml
+.idea/CarND-Capstone.iml
