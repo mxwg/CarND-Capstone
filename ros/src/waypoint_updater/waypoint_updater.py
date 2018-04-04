@@ -45,6 +45,7 @@ def waypointToMarker(waypoint, frame_id, ts=rospy.Time(0), idx=0, color=[0.0, 1.
     marker.color.b = color[2]
     return marker
 
+
 def stopMarker(waypoint, frame_id, ts=rospy.Time(0), idx=0):
     scale = 25
     color = [1.0, 0.0, 0.0]
@@ -64,6 +65,7 @@ def stopMarker(waypoint, frame_id, ts=rospy.Time(0), idx=0):
     marker.color.g = color[1]
     marker.color.b = color[2]
     return marker
+
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -87,7 +89,7 @@ class WaypointUpdater(object):
         self.n_lookahead_wp = LOOKAHEAD_WPS
         self.nearest_idx = None
         self.wp_tree = None
-        self.next_traffic_light_idx = None
+        self.next_traffic_light_idx = -1
 
         rospy.spin()
 
@@ -100,23 +102,32 @@ class WaypointUpdater(object):
             return  # not yet ready
 
         self.update_nearest_waypoint()
-        self.set_velocities()
-        self.publish_final_waypoints()
+        waypoints = self.set_velocities()
+        self.publish_final_waypoints(waypoints)
 
     def set_velocities(self):
         """Set the velocities of the next waypoints."""
+        waypoints = []
         for i in range(self.n_lookahead_wp):
-            wp = self.nearest(offset=i)
-            wp.twist.twist.linear.x = 10  # TODO: set linear velocity to something sensible
+            wp_orig = self.nearest(offset=i)
+            wp = Waypoint()
+            wp.pose = wp_orig.pose
+            wp.twist.twist.linear.x = wp_orig.twist.twist.linear.x
+            if self.next_traffic_light_idx != -1 and self.next_traffic_light_idx - self.nearest_idx <= self.n_lookahead_wp*2:
+                dist_to_stoplight = self.distance(self.waypoints, self.nearest_idx + i, self.next_traffic_light_idx)
+                vel = math.sqrt(2 * 0.5 * dist_to_stoplight)
+                if vel < 2.0:
+                    vel = 0.0
+                wp.twist.twist.linear.x = min(vel, wp.twist.twist.linear.x)  # don't set a vel higher than it was
+            waypoints.append(wp)
+        return waypoints
 
-    def publish_final_waypoints(self, visualize=True):
+    def publish_final_waypoints(self, waypoints, visualize=True):
         """Publish the next waypoints."""
         lane = Lane()
         lane.header.frame_id = 'world'
         lane.header.stamp = rospy.Time.now()
-        # for i in range(self.n_lookahead_wp):
-        #     wp = self.nearest(offset=i)
-        lane.waypoints = self.waypoints[self.nearest_idx:self.nearest_idx+self.n_lookahead_wp]
+        lane.waypoints = waypoints
 
         self.final_waypoints_pub.publish(lane)
         if visualize:
@@ -133,11 +144,10 @@ class WaypointUpdater(object):
                 array.markers.append(
                     waypointToMarker(self.nearest(i), 'world', ts=rospy.Time.now(), idx=i, color=yellow))
 
-        if self.next_traffic_light_idx and self.next_traffic_light_idx != -1:
+        if self.next_traffic_light_idx != -1:
             array.markers.append(stopMarker(self.waypoints[self.next_traffic_light_idx],
                                             'world', ts=rospy.Time.now(), idx=len(array.markers)))
         self.final_waypoints_marker_pub.publish(array)
-
 
     def nearest(self, offset=0):
         """Get current nearest waypoint."""
@@ -158,7 +168,7 @@ class WaypointUpdater(object):
         prev = np.array([prev_wp.x, prev_wp.y])
         car = np.array([self.car_pose_x, self.car_pose_y])
 
-        if np.dot(nearest - prev, car - nearest) > 0: # waypoint is behind car
+        if np.dot(nearest - prev, car - nearest) > 0:  # waypoint is behind car
             self.nearest_idx = (nearest_idx + 1) % self.n_wp
 
         # rospy.logdebug("Nearest waypoint: {}, dist: {}".format(self.nearest_waypoint_idx, self.dist_to(self.nearest())))
