@@ -37,6 +37,10 @@ class Controller(object):
             brake = -delta_throttle
         else:
             throttle = 0.
+
+        if proposed_linear_vel == 0.0:
+            brake = 400
+            throttle = 0
         
         # Steering Controller
         if self.brake_deadband>0.1:
