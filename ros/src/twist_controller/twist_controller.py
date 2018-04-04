@@ -29,12 +29,13 @@ class Controller(object):
         # Acceleration Controller
         brake = 0.
         delta_throttle = self.vel_pid.step(proposed_linear_vel-current_linear_vel, 0.02)
+
         if delta_throttle > 0.:
             throttle = delta_throttle
-            throttle = self.lowpassFilt.filt(throttle)
+            # throttle = self.lowpassFilt.filt(throttle)
         elif delta_throttle < -self.brake_deadband:
             throttle = 0.
-            brake = -delta_throttle
+            brake = -delta_throttle * 100
         else:
             throttle = 0.
 
