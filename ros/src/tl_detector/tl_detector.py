@@ -141,7 +141,7 @@ class TLDetector(object):
 
         # List of positions that correspond to the line to stop in front of for a given intersection
         stop_line_positions = self.config['stop_line_positions']
-        if(self.pose):
+        if(self.pose and self.tree):
             car = self.pose.pose.position
             car_wp_idx = self.get_closest_waypoint(car.x, car.y)
 
