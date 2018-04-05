@@ -39,7 +39,7 @@ class TrafficLightVisualizer(object):
     def __init__(self):
         rospy.init_node('traffic_light_visualizer')
 
-        rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.get_traffic_light_status_cb)
+        rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.get_traffic_light_status_cb, queue_size=1)
 
         self.traffic_light_marker_pub = rospy.Publisher('traffic_light_markers', MarkerArray, queue_size=1)
 
