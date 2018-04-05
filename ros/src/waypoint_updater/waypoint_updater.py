@@ -158,6 +158,7 @@ class WaypointUpdater(object):
         if not self.wp_tree:
             self.nearest_idx = 0
             return
+
         nearest_idx = self.wp_tree.query([self.car_pose_x, self.car_pose_y], 1)[1]
 
         # check if the closest waypoint is behind the car
@@ -170,7 +171,8 @@ class WaypointUpdater(object):
 
         if np.dot(nearest - prev, car - nearest) > 0:  # waypoint is behind car
             self.nearest_idx = (nearest_idx + 1) % self.n_wp
-
+        else:
+            self.nearest_idx = nearest_idx
         # rospy.logdebug("Nearest waypoint: {}, dist: {}".format(self.nearest_waypoint_idx, self.dist_to(self.nearest())))
 
     def dist_to(self, waypoint):
