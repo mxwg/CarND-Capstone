@@ -52,7 +52,7 @@ class Bridge(object):
         '/final_waypoints': self.callback_path
         }
 
-        self.subscribers = [rospy.Subscriber(e.topic, TYPE[e.type], self.callbacks[e.topic])
+        self.subscribers = [rospy.Subscriber(e.topic, TYPE[e.type], self.callbacks[e.topic], queue_size=1)
                             for e in conf.subscribers]
 
         self.publishers = {e.name: rospy.Publisher(e.topic, TYPE[e.type], queue_size=1)
