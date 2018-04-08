@@ -17,35 +17,37 @@ class Controller(object):
         self.decel_limit = kwargs['decel_limit']
         self.accel_limit = kwargs['accel_limit']
         self.brake_deadband = kwargs['brake_deadband']
+        self.vehicle_mass = kwargs['vehicle_mass']
+        self.wheel_radius = kwargs['wheel_radius']
 
-        self.steer_pid = YawController(wheel_base, self.steer_ratio, min_velocity, max_lat_accel, max_steer_angle)
-        self.vel_pid = PID(0.5, 0., 0., self.decel_limit, self.accel_limit)
-        self.lowpassFilt = LowPassFilter(0.07, 0.02)
+        self.yaw_controller = YawController(wheel_base, self.steer_ratio, 0.1, max_lat_accel, max_steer_angle)
+        self.vel_pid = PID(0.3, 0.1, 0., 0.0, self.accel_limit)
+        self.lowpassFilt = LowPassFilter(0.5, 0.02)
 
     def control(self, proposed_linear_vel, proposed_angular_vel, current_linear_vel):
-        # TODO: Change the arg, kwarg list to suit your needs
-        #TODO: add safety at traffic lights, sharp turn, steer limits etc.
-        # Return throttle, brake, steer
         # Acceleration Controller
         brake = 0.
         delta_throttle = self.vel_pid.step(proposed_linear_vel-current_linear_vel, 0.02)
+
+        # TODO: brake if within brake_deadband?
         if delta_throttle > 0.:
             throttle = delta_throttle
-            throttle = self.lowpassFilt.filt(throttle)
-        elif delta_throttle < -self.brake_deadband:
+        elif delta_throttle < 0:
             throttle = 0.
-            brake = -delta_throttle
+            delta_throttle = max(delta_throttle, self.decel_limit)
+            brake = abs(delta_throttle) * self.vehicle_mass * self.wheel_radius # torque N*m
         else:
             throttle = 0.
-        
+
+        if proposed_linear_vel == 0.0:
+            # complete standstill
+            brake = 400
+            throttle = 0
+            self.reset()
+
         # Steering Controller
-        if self.brake_deadband>0.1:
-            if current_linear_vel > 0.05:
-                steering = self.steer_pid.get_steering(proposed_linear_vel, proposed_angular_vel, current_linear_vel)
-            else:
-                steering = 0.
-        else:
-            steering = proposed_angular_vel * self.steer_ratio
+        steering = self.yaw_controller.get_steering(proposed_linear_vel, proposed_angular_vel, current_linear_vel)
+
         return throttle, brake, steering
     
     def reset(self):
