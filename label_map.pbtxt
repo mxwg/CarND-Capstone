@@ -13,3 +13,8 @@ item {
     id: 3
     display_name: 'yellow'
 }
+item {
+    name: 'none'
+    id: 4
+    display_name: 'none'
+}
