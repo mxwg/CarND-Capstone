@@ -47,16 +47,17 @@ class TLClassifier(object):
         with tf.Session(graph=self.graph) as sess:
             (_, scores, classes) = sess.run([self.detection_boxes, self.detection_scores, self.detection_classes], 
                                         feed_dict={self.image_tensor: image})
-
+        
         scores = np.squeeze(scores)
         classes = np.squeeze(classes)
+
         max_scores = [j for (i,j) in zip(scores, classes) if i >= self.confidence_cutoff]
         if max_scores is None:
             return TrafficLight.UNKNOWN
         else:
-            return self.get_tl_color(classes[np.argmax(scores)])
+            return self.get_tl_color(int(max_scores[0]))
     
-    def get_tl_color(color_class):
+    def get_tl_color(self, color_class):
         return {
             self.TL_COLOR_GREEN: TrafficLight.GREEN,
             self.TL_COLOR_RED: TrafficLight.RED,
