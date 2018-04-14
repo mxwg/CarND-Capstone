@@ -44,7 +44,9 @@ class TLDetector(object):
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
 
         self.bridge = CvBridge()
-        self.light_classifier = TLClassifier()
+
+        graph_source = rospy.get_param('~graph_source')
+        self.light_classifier = TLClassifier(graph_source)
         self.listener = tf.TransformListener()
 
         self.state = TrafficLight.UNKNOWN
@@ -116,7 +118,6 @@ class TLDetector(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
-        return light.state
 
         if(not self.has_image):
             self.prev_light_loc = None
