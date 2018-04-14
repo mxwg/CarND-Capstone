@@ -52,7 +52,7 @@ class TLClassifier(object):
         classes = np.squeeze(classes)
 
         max_scores = [j for (i,j) in zip(scores, classes) if i >= self.confidence_cutoff]
-        if max_scores is None:
+        if max_scores is None or not max_scores:
             return TrafficLight.UNKNOWN
         else:
             return self.get_tl_color(int(max_scores[0]))
