@@ -28,7 +28,11 @@ class TLClassifier(object):
         self.detection_scores = graph.get_tensor_by_name('detection_scores:0')
         self.detection_classes = graph.get_tensor_by_name('detection_classes:0')
         self.detection_boxes = graph.get_tensor_by_name('detection_boxes:0')
-        self.graph = graph
+
+        # create session only once
+        config=tf.ConfigProto()
+        config.gpu_options.allow_growth=True
+        self.session = tf.Session(graph=graph, config=config)
 
     def get_classification(self, image):
         """Determines the color of the traffic light in the image
@@ -44,8 +48,7 @@ class TLClassifier(object):
         image = cv2.resize(image, (0, 0), fx=0.5, fy=0.5, interpolation=cv2.INTER_AREA)
         image = np.expand_dims(np.asarray(image, dtype=np.uint8), 0)
 
-        with tf.Session(graph=self.graph) as sess:
-            (_, scores, classes) = sess.run([self.detection_boxes, self.detection_scores, self.detection_classes], 
+        (_, scores, classes) = self.session.run([self.detection_boxes, self.detection_scores, self.detection_classes], 
                                         feed_dict={self.image_tensor: image})
         
         scores = np.squeeze(scores)
