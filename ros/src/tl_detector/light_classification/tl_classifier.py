@@ -33,6 +33,10 @@ class TLClassifier(object):
         config=tf.ConfigProto()
         config.gpu_options.allow_growth=True
         self.session = tf.Session(graph=graph, config=config)
+        # front-load tf initialization
+        dummy_image = np.empty([1, 300,400, 3], dtype=np.uint8)
+        (_, _, _) = self.session.run([self.detection_boxes, self.detection_scores, self.detection_classes],
+                                        feed_dict={self.image_tensor: dummy_image})
 
     def get_classification(self, image):
         """Determines the color of the traffic light in the image
