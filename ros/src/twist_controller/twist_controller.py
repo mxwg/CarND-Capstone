@@ -27,19 +27,18 @@ class Controller(object):
     def control(self, proposed_linear_vel, proposed_angular_vel, current_linear_vel):
         # Acceleration Controller
         brake = 0.
-        delta_throttle = self.vel_pid.step(proposed_linear_vel-current_linear_vel, 0.02)
+        velocity_error = proposed_linear_vel - current_linear_vel
+        delta_throttle = self.vel_pid.step(velocity_error, 0.02)
 
         # TODO: brake if within brake_deadband?
         if delta_throttle > 0.:
             throttle = delta_throttle
-        elif delta_throttle < 0:
+        elif delta_throttle < 0.1:
             throttle = 0.
-            delta_throttle = max(delta_throttle, self.decel_limit)
-            brake = abs(delta_throttle) * self.vehicle_mass * self.wheel_radius # torque N*m
-        else:
-            throttle = 0.
+            decel = min(velocity_error, self.decel_limit)
+            brake = abs(decel) * self.vehicle_mass * self.wheel_radius # torque N*m
 
-        if proposed_linear_vel == 0.0:
+        if proposed_linear_vel == 0.0 and current_linear_vel < 0.1:
             # complete standstill
             brake = 400
             throttle = 0
