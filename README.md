@@ -72,3 +72,6 @@ cd CarND-Capstone/ros
 roslaunch launch/site.launch
 ```
 5. Confirm that traffic light detection works on real life images
+
+### Trained models
+Get them [here](https://drive.google.com/drive/folders/1P8vu8ZX_CztGEa9yxqFurOgNGeC2p8NF?usp=sharing).
