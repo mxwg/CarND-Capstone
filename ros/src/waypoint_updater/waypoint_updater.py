@@ -87,7 +87,7 @@ class WaypointUpdater(object):
         self.waypoints = None
         self.n_wp = 0
         self.n_lookahead_wp = LOOKAHEAD_WPS
-        self.nearest_idx = None
+        self.nearest_idx = 0
         self.wp_tree = None
         self.next_traffic_light_idx = -1
 
