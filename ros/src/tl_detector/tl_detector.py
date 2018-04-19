@@ -13,11 +13,13 @@ import yaml
 from scipy.spatial import KDTree
 
 
-STATE_COUNT_THRESHOLD = 3
+STATE_COUNT_THRESHOLD = 2
 
 class TLDetector(object):
     def __init__(self):
         rospy.init_node('tl_detector')
+        graph_source = rospy.get_param('~graph_source')
+        self.light_classifier = TLClassifier(graph_source)
 
         self.pose = None
         self.waypoints = None
@@ -25,32 +27,32 @@ class TLDetector(object):
         self.lights = []
         self.tree = None
 
-        sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb, queue_size=1)
-        sub2 = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb, queue_size=1)
-
-        '''
-        /vehicle/traffic_lights provides you with the location of the traffic light in 3D map space and
-        helps you acquire an accurate ground truth data source for the traffic light
-        classifier by sending the current color state of all traffic lights in the
-        simulator. When testing on the vehicle, the color state will not be available. You'll need to
-        rely on the position of the light and the camera image to predict it.
-        '''
-        sub3 = rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_cb, queue_size=1)
-        sub6 = rospy.Subscriber('/image_color', Image, self.image_cb, queue_size=1)
-
         config_string = rospy.get_param("/traffic_light_config")
         self.config = yaml.load(config_string)
 
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
 
         self.bridge = CvBridge()
-        self.light_classifier = TLClassifier()
+
         self.listener = tf.TransformListener()
 
         self.state = TrafficLight.UNKNOWN
         self.last_state = TrafficLight.UNKNOWN
         self.last_wp = -1
         self.state_count = 0
+
+        # Subscribe only at this point to give tf time to start up
+        sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb, queue_size=1)
+        sub2 = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb, queue_size=1)
+        '''
+                /vehicle/traffic_lights provides you with the location of the traffic light in 3D map space and
+                helps you acquire an accurate ground truth data source for the traffic light
+                classifier by sending the current color state of all traffic lights in the
+                simulator. When testing on the vehicle, the color state will not be available. You'll need to
+                rely on the position of the light and the camera image to predict it.
+                '''
+        sub3 = rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_cb, queue_size=1)
+        sub6 = rospy.Subscriber('/image_color', Image, self.image_cb, queue_size=1)
 
         rospy.spin()
 
@@ -116,7 +118,6 @@ class TLDetector(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
-        return light.state
 
         if(not self.has_image):
             self.prev_light_loc = None
