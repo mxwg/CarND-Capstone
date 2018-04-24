@@ -60,8 +60,10 @@ class TLClassifier(object):
 
         max_scores = [j for (i,j) in zip(scores, classes) if i >= self.confidence_cutoff]
         if max_scores is None or not max_scores:
+            print "color: unknown"
             return TrafficLight.UNKNOWN
         else:
+            print "color:", int(max_scores[0])
             return self.get_tl_color(int(max_scores[0]))
     
     def get_tl_color(self, color_class):
