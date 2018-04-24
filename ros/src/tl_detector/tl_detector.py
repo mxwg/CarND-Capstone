@@ -137,6 +137,7 @@ class TLDetector(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
+        print "processing..."
         closest_light = None
         line_wp_idx = None
 
@@ -158,7 +159,7 @@ class TLDetector(object):
                     closest_light = light
                     line_wp_idx = temp_wp_idx
 
-        if closest_light:
+        if True: # apparently the stop light positions are not contained in the bag
             state = self.get_light_state(closest_light)
             return line_wp_idx, state
 
